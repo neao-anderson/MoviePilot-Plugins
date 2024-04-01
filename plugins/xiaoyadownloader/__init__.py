@@ -12,51 +12,56 @@ from app.utils.system import SystemUtils
 
 class CustomHosts(_PluginBase):
     # 插件名称
-    plugin_name = "自定义Hosts"
+    plugin_name = "小雅下载器"
     # 插件描述
-    plugin_desc = "修改系统hosts文件，加速网络访问。"
+    plugin_desc = "从小雅中下载文件或者文件夹"
     # 插件图标
-    plugin_icon = "hosts.png"
+    plugin_icon = "xiaoya.png"
     # 插件版本
     plugin_version = "1.0"
     # 插件作者
-    plugin_author = "thsrite"
+    plugin_author = "neao"
     # 作者主页
-    author_url = "https://github.com/thsrite"
+    author_url = "https://github.com/neao-anderson"
     # 插件配置项ID前缀
-    plugin_config_prefix = "customhosts_"
+    plugin_config_prefix = "xiaoyadownloader_"
     # 加载顺序
-    plugin_order = 10
+    plugin_order = 25
     # 可使用的用户级别
     auth_level = 1
 
     # 私有属性
-    _hosts = []
+    _urls = []
     _enabled = False
 
     def init_plugin(self, config: dict = None):
         # 读取配置
         if config:
             self._enabled = config.get("enabled")
-            self._hosts = config.get("hosts")
-            if isinstance(self._hosts, str):
-                self._hosts = str(self._hosts).split('\n')
+            self._urls = config.get("urls")
+            # 还需要读取webdav配置
+            
+            if isinstance(self._urls, str):
+                self._urls = str(self._urls).split('\n')
+            
             if self._enabled and self._hosts:
                 # 排除空的host
-                new_hosts = []
-                for host in self._hosts:
-                    if host and host != '\n':
-                        new_hosts.append(host.replace("\n", "") + "\n")
-                self._hosts = new_hosts
+                new_urls = []
+                for url in self._urls:
+                    if url and url != '\n':
+                        new_urls.append(url.replace("\n", ""))
+                self._urls = new_urls
 
-                # 添加到系统
-                error_flag, error_hosts = self.__add_hosts_to_system(self._hosts)
+                # 进行下载
+                error_flag, error_urls = self.__xiaoya_downloader(self._urls)
+
+                # 只执行一次
                 self._enabled = self._enabled and not error_flag
 
                 # 更新错误Hosts
                 self.update_config({
-                    "hosts": ''.join(self._hosts),
-                    "err_hosts": error_hosts,
+                    "urls": '\n'.join(self._urls),
+                    "err_urls": '\n'.join(self.err_urls),
                     "enabled": self._enabled
                 })
 
@@ -111,10 +116,10 @@ class CustomHosts(_PluginBase):
                                            {
                                                'component': 'VTextarea',
                                                'props': {
-                                                   'model': 'hosts',
-                                                   'label': '自定义hosts',
+                                                   'model': 'urls',
+                                                   'label': '小雅URL',
                                                    'rows': 10,
-                                                   'placeholder': '每行一个配置，格式为：ip host1 host2 ...'
+                                                   'placeholder': '每行一个URL'
                                                }
                                            }
                                        ]
@@ -133,11 +138,11 @@ class CustomHosts(_PluginBase):
                                            {
                                                'component': 'VTextarea',
                                                'props': {
-                                                   'model': 'err_hosts',
+                                                   'model': 'err_urls',
                                                    'readonly': True,
-                                                   'label': '错误hosts',
+                                                   'label': '错误url',
                                                    'rows': 2,
-                                                   'placeholder': '错误的hosts配置会展示在此处，请修改上方hosts重新提交（错误的hosts不会写入系统hosts文件）'
+                                                   'placeholder': '错误的url配置会展示在此处，请修改上方url重新提交（错误的url不会下载）'
                                                }
                                            }
                                        ]
@@ -158,8 +163,8 @@ class CustomHosts(_PluginBase):
                                                'props': {
                                                    'type': 'info',
                                                    'variant': 'tonal',
-                                                   'text': 'host格式ip host，中间有空格！！！'
-                                                           '（注：容器运行则更新容器hosts！非宿主机！）'
+                                                   'text': 'URL直接从地址栏复制或者右键复制下载链接'
+                                                           '（小雅使用默认的账户密码（guest/guest_Api789））'
                                                }
                                            }
                                        ]
@@ -170,8 +175,8 @@ class CustomHosts(_PluginBase):
                    }
                ], {
                    "enabled": False,
-                   "hosts": "",
-                   "err_hosts": ""
+                   "urls": "",
+                   "err_urls": ""
                }
 
     def get_page(self) -> List[dict]:
@@ -190,54 +195,58 @@ class CustomHosts(_PluginBase):
         # 读取系统hosts
         return Hosts(path=hosts_path)
 
-    def __add_hosts_to_system(self, hosts):
+    def __xiaoya_downloader(self, urls):
         """
-        添加hosts到系统
+        逐一下载每个URL
         """
-        # 系统hosts对象
-        system_hosts = self.__read_system_hosts()
-        # 过滤掉插件添加的hosts
-        orgin_entries = []
-        for entry in system_hosts.entries:
-            if entry.entry_type == "comment" and entry.comment == "# CustomHostsPlugin":
-                break
-            orgin_entries.append(entry)
-        system_hosts.entries = orgin_entries
-        # 新的有效hosts
-        new_entrys = []
-        # 新的错误的hosts
-        err_hosts = []
+        # # 系统hosts对象
+        # system_hosts = self.__read_system_hosts()
+        # # 过滤掉插件添加的hosts
+        # orgin_entries = []
+        # for entry in system_hosts.entries:
+        #     if entry.entry_type == "comment" and entry.comment == "# CustomHostsPlugin":
+        #         break
+        #     orgin_entries.append(entry)
+        # system_hosts.entries = orgin_entries
+        # # 新的有效hosts
+        # new_entrys = []
+        # # 新的错误的hosts
+        err_urls = []
         err_flag = False
-        for host in hosts:
-            if not host:
-                continue
-            host_arr = str(host).split()
+        for index, url in enumerate(urls):
+            # if not url:
+            #     continue
+            # host_arr = str(host).split()
             try:
-                host_entry = HostsEntry(entry_type='ipv4' if IpUtils.is_ipv4(str(host_arr[0])) else 'ipv6',
-                                        address=host_arr[0],
-                                        names=host_arr[1:])
-                new_entrys.append(host_entry)
+                # host_entry = HostsEntry(entry_type='ipv4' if IpUtils.is_ipv4(str(host_arr[0])) else 'ipv6',
+                #                         address=host_arr[0],
+                #                         names=host_arr[1:])
+                # new_entrys.append(host_entry)
+                if index % 2 == 0:
+                    err_urls.append(url)
+                    logger.error(f"[XIAOYA] URL错误：{str(url)}")
+                    err_flag = False
             except Exception as err:
-                err_hosts.append(host + "\n")
+                err_urls.append(host + "\n")
                 logger.error(f"[HOST] 格式转换错误：{str(err)}")
                 # 推送实时消息
                 self.systemmessage.put(f"[HOST] 格式转换错误：{str(err)}")
 
-        # 写入系统hosts
-        if new_entrys:
-            try:
-                # 添加分隔标识
-                system_hosts.add([HostsEntry(entry_type='comment', comment="# CustomHostsPlugin")])
-                # 添加新的Hosts
-                system_hosts.add(new_entrys)
-                system_hosts.write()
-                logger.info("更新系统hosts文件成功")
-            except Exception as err:
-                err_flag = True
-                logger.error(f"更新系统hosts文件失败：{str(err) or '请检查权限'}")
-                # 推送实时消息
-                self.systemmessage.put(f"更新系统hosts文件失败：{str(err) or '请检查权限'}")
-        return err_flag, err_hosts
+        # # 写入系统hosts
+        # if new_entrys:
+        #     try:
+        #         # 添加分隔标识
+        #         system_hosts.add([HostsEntry(entry_type='comment', comment="# CustomHostsPlugin")])
+        #         # 添加新的Hosts
+        #         system_hosts.add(new_entrys)
+        #         system_hosts.write()
+        #         logger.info("更新系统hosts文件成功")
+        #     except Exception as err:
+        #         err_flag = True
+        #         logger.error(f"更新系统hosts文件失败：{str(err) or '请检查权限'}")
+        #         # 推送实时消息
+        #         self.systemmessage.put(f"更新系统hosts文件失败：{str(err) or '请检查权限'}")
+        return err_flag, err_urls
 
     def stop_service(self):
         """
