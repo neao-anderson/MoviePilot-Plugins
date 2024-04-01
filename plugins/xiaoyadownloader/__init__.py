@@ -61,7 +61,8 @@ class xiaoyadownloader(_PluginBase):
                 self._urls = new_urls
 
                 # 进行下载
-                error_flag, error_urls = self.__xiaoya_downloaders(self._urls, self._save_path)
+                save_path = self._save_path
+                error_flag, error_urls = self.__xiaoya_downloaders(self._urls, save_path)
 
                 # 只执行一次
                 self._enabled = self._enabled and not error_flag
@@ -383,8 +384,8 @@ class xiaoyadownloader(_PluginBase):
         """
         if not save_path.endswith('/'):
             save_path = save_path + '/'
-        err_urls = []
-        err_flag = False
+        err_urls = [111]
+        err_flag = True
         for index, url in enumerate(urls):
             try:
                 xiaoya_downloader(self, url, save_path)
