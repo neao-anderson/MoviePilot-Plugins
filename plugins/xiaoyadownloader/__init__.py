@@ -10,6 +10,8 @@ import urllib.parse, requests, re, os, time
 from webdav3.client import Client
 from webdav3.exceptions import *
 
+logger.setLevel(20)
+
 class xiaoyadownloader(_PluginBase):
     # 插件名称
     plugin_name = "小雅下载器"
@@ -18,7 +20,7 @@ class xiaoyadownloader(_PluginBase):
     # 插件图标
     plugin_icon = "https://s2.loli.net/2023/04/24/Z9bMjB3TutzKDGY.png"
     # 插件版本
-    plugin_version = "0.3"
+    plugin_version = "0.4"
     # 插件作者
     plugin_author = "neao"
     # 作者主页
@@ -32,13 +34,14 @@ class xiaoyadownloader(_PluginBase):
 
     # 私有属性
     _urls = []
-    _save_root = ''
+    _save_root = './'
     _options = {}
     _enabled = False
     
 
     def init_plugin(self, config: dict = None):
         # 读取配置
+        logger.debug(f"[XIAOYA]开始初始化")
         if config:
             self._enabled = config.get("enabled")
             self._save_root = config.get("save_root")
@@ -57,14 +60,15 @@ class xiaoyadownloader(_PluginBase):
                         # 对URL进行解码
                         url = urllib.parse.unquote(url)
                         new_urls.append(url.replace("\n", ""))
-                        logger.debug(f"[XIAOYA]解码后的URL:%s" % url)
+                        logger.debug(f"[XIAOYA]解码后的URL:{str(url)}")
                 self._urls = new_urls
 
                 # 进行下载
-                error_flag, error_urls = self.xiaoya_downloaders(self._urls, self._save_root)
-
-                # 只执行一次
-                self._enabled = self._enabled and not error_flag
+                if self._enabled:
+                    self._save_root = "/media/Downloads/"
+                    error_flag, error_urls = self.xiaoya_downloaders(self._urls)
+                    # 只执行一次
+                    self._enabled = self._enabled and not error_flag
 
                 # 更新错误urls
                 self.update_config({
@@ -106,7 +110,7 @@ class xiaoyadownloader(_PluginBase):
                                                'component': 'VSwitch',
                                                'props': {
                                                    'model': 'enabled',
-                                                   'label': '启用插件',
+                                                   'label': '启动下载',
                                                }
                                            }
                                        ]
@@ -216,6 +220,7 @@ class xiaoyadownloader(_PluginBase):
         pass
 
     def parse_url(self, url):
+        logger.debug(f"[XIAOYA]开始解析url")
         # 根据URL解析主机
         pattern = r'^(?:http[s]?://)?([^:/\s]+)(?::(\d+))?'
         match = re.search(pattern, url)
@@ -236,6 +241,7 @@ class xiaoyadownloader(_PluginBase):
         return {"remote_path": remote_path, "save_floder": save_floder}
 
     def list_remote(self, client, remote_path):
+        logger.debug(f"[XIAOYA]开始获取资源列表")
         # 获取资源列表
         try:
             items = client.list(remote_path,get_info=True)
@@ -258,6 +264,7 @@ class xiaoyadownloader(_PluginBase):
         return file_list 
 
     def download_file(self, item, retries=5, delay=3):
+        logger.debug(f"[XIAOYA]开始下载单个文件")
         file_name   = item['name']
         file_size   = int(item['size'])
         remote_path = item['remote_path']
@@ -305,6 +312,7 @@ class xiaoyadownloader(_PluginBase):
             logger.error(f"[XIAOYA]出现未知异常: {e}")
 
     def download_files(self, download_file_list):
+        logger.debug(f"[XIAOYA]开始下载多个文件")
         total_file_num  = len(download_file_list)
         finish_file_num = 0
         # socketio.emit('update_list_progress', {'total_file_num': total_file_num, 'finish_file_num': finish_file_num})
@@ -332,6 +340,7 @@ class xiaoyadownloader(_PluginBase):
         logger.info(f"[XIAOYA]文件全部下载任务完成")
 
     def xiaoya_downloader(self, url, save_path):
+        logger.debug(f"[XIAOYA]开始处理单个url")
         temp = self.parse_url(url)
         url = temp["url"]
         host = temp["host"]
@@ -375,17 +384,19 @@ class xiaoyadownloader(_PluginBase):
         self.download_files(download_file_list)
         # self.systemmessage.put(f"[XIYA] {str(err)}下载完成")
 
-    def xiaoya_downloaders(self, urls, save_root):
+    def xiaoya_downloaders(self, urls):
         """
         逐一下载每个URL
         """
-        if not save_root.endswith('/'):
-            save_root = save_root + '/'
+        logger.debug(f"[XIAOYA]开始处理多个url")
+        if not _save_root.endswith('/'):
+            _save_root = _save_root + '/'
+        
         err_urls = ["111","https://111.bbb.com"]
         err_flag = True
         for index, url in enumerate(urls):
             try:
-                self.xiaoya_downloader(self, url, save_root)
+                self.xiaoya_downloader(self, url, _save_root)
             except Exception as e:
                 err_urls.append(url + "\n")
                 logger.error(f"[XIAOYA] {str(e)}下载失败")
