@@ -10,15 +10,15 @@ from app.utils.ip import IpUtils
 from app.utils.system import SystemUtils
 
 
-class CustomHosts(_PluginBase):
+class xiaoyadownloader(_PluginBase):
     # 插件名称
     plugin_name = "小雅下载器"
     # 插件描述
     plugin_desc = "从小雅中下载文件或者文件夹"
     # 插件图标
-    plugin_icon = "xiaoya.png"
+    plugin_icon = "https://s2.loli.net/2023/04/24/Z9bMjB3TutzKDGY.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "0.1"
     # 插件作者
     plugin_author = "neao"
     # 作者主页
@@ -26,7 +26,7 @@ class CustomHosts(_PluginBase):
     # 插件配置项ID前缀
     plugin_config_prefix = "xiaoyadownloader_"
     # 加载顺序
-    plugin_order = 25
+    plugin_order = 10
     # 可使用的用户级别
     auth_level = 1
 
