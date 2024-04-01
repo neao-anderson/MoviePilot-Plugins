@@ -10,7 +10,7 @@ import urllib.parse, requests, re, os, time
 from webdav3.client import Client
 from webdav3.exceptions import *
 
-class xiaoyadownloader(_PluginBase):
+class xiaoyadownloader(self):
     # 插件名称
     plugin_name = "小雅下载器"
     # 插件描述
@@ -18,7 +18,7 @@ class xiaoyadownloader(_PluginBase):
     # 插件图标
     plugin_icon = "https://s2.loli.net/2023/04/24/Z9bMjB3TutzKDGY.png"
     # 插件版本
-    plugin_version = "0.5"
+    plugin_version = "1.0"
     # 插件作者
     plugin_author = "neao"
     # 作者主页
@@ -63,7 +63,6 @@ class xiaoyadownloader(_PluginBase):
 
                 # 进行下载
                 if self._enabled:
-                    self._save_root = "/media/Downloads/"
                     error_flag, error_urls = self.xiaoya_downloaders(self._urls)
                     # 只执行一次
                     self._enabled = self._enabled and not error_flag
@@ -173,9 +172,8 @@ class xiaoyadownloader(_PluginBase):
                                                'component': 'VTextarea',
                                                'props': {
                                                    'model': 'err_urls',
-                                                   'readonly': True,
                                                    'label': '错误url',
-                                                   'rows': 2,
+                                                   'rows': 3,
                                                    'placeholder': '错误的url配置会展示在此处，请修改上方url重新提交（错误的url不会下载）'
                                                }
                                            }
@@ -236,7 +234,7 @@ class xiaoyadownloader(_PluginBase):
         save_floder = os.path.basename(url) # 最后一级目录
         logger.debug(f"[XIAOYA]保存文件夹:{str(save_floder)}")
         
-        return {"remote_path": remote_path, "save_floder": save_floder}
+        return {"host":host, "remote_path": remote_path, "save_floder": save_floder}
 
     def list_remote(self, client, remote_path):
         logger.debug(f"[XIAOYA]开始获取资源列表")
@@ -244,7 +242,7 @@ class xiaoyadownloader(_PluginBase):
         try:
             items = client.list(remote_path,get_info=True)
         except Exception as e:
-            logger.error(f"[XIAOYA]获取远程文件列表时出错: {str(e)}")
+            logger.error(f"[XIAOYA]获取远程文件列表【{str(remote_path)}】时出错: {str(e)}")
         
         file_list = []
         
@@ -269,17 +267,17 @@ class xiaoyadownloader(_PluginBase):
         save_path   = item["save_path"]
 
         if retries <= 0:
-            logger.error(f"[XIAOYA]{str(file_name)}下载失败:")
+            logger.error(f"[XIAOYA]【{str(file_name)}】下载失败")
             return 0
 
         if os.path.exists(save_path):
             _file_size = os.path.getsize(save_path)
             write_mode = 'ab'
-            logger.info(f"[XIAOYA]开始续传文件{str(file_name)}")
+            logger.info(f"[XIAOYA]开始续传文件苹【{str(file_name)}】")
         else:
             _file_size = 0
             write_mode = 'wb'
-            logger.info(f"[XIAOYA]开始下载文件{str(file_name)}")
+            logger.info(f"[XIAOYA]开始下载文件【{str(file_name)}】")
 
         try:
             headers = {'Range': 'bytes=%d-' % _file_size}
@@ -294,7 +292,7 @@ class xiaoyadownloader(_PluginBase):
                             progress = round(_file_size/file_size*100,2)
                             if progress >= next_level and file_size/(1024*1024*1024) > 1:
                                 next_level += 10
-                                logger.info(f"[XIAOYA]文件 {str(file_name)} 下载进度: {str(progress)}%,{str(round(_file_size/(1024*1024*1024),2))}GB/{str(round(file_size/(1024*1024*1024),2))}GB")
+                                logger.info(f"[XIAOYA]文件【{str(file_name)}】下载进度: {str(progress)}%,{str(round(_file_size/(1024*1024*1024),2))}GB/{str(round(file_size/(1024*1024*1024),2))}GB")
             logger.info(f"[XIAOYA]文件已从 {str(remote_path)} 下载到 {str(save_path)}")
             return 1
         except requests.exceptions.RequestException as e:
@@ -305,16 +303,18 @@ class xiaoyadownloader(_PluginBase):
         except IOError as e:
             # 捕获文件操作相关的异常
             logger.error(f"[XIAOYA]出现读写异常: {e}")
+            return 0
         except Exception as e:
             # 捕获其他未知异常
             logger.error(f"[XIAOYA]出现未知异常: {e}")
+            return 0
 
     def download_files(self, download_file_list):
         logger.debug(f"[XIAOYA]开始下载多个文件")
         total_file_num  = len(download_file_list)
         finish_file_num = 0
         # socketio.emit('update_list_progress', {'total_file_num': total_file_num, 'finish_file_num': finish_file_num})
-        logger.info(f"总共需要下载{str(total_file_num)}个文件,已经下载{str(finish_file_num)}个文件")
+        logger.info(f"[XIAOYA]总共需要下载{str(total_file_num)}个文件,已经下载{str(finish_file_num)}个文件")
         
         for item in download_file_list:
             file_name   = item['name']
@@ -336,11 +336,14 @@ class xiaoyadownloader(_PluginBase):
             logger.info(f"[XIAOYA]总共需要下载{str(total_file_num)}个文件,已经下载{str(finish_file_num)}个文件")
         
         logger.info(f"[XIAOYA]文件全部下载任务完成")
+        if total_file_num == finish_file_num:
+            return True
+        else:
+            return False
 
     def xiaoya_downloader(self, url, save_path):
         logger.debug(f"[XIAOYA]开始处理单个url")
         temp = self.parse_url(url)
-        url = temp["url"]
         host = temp["host"]
         remote_path = temp["remote_path"]
         save_floder = temp["save_floder"]
@@ -362,7 +365,7 @@ class xiaoyadownloader(_PluginBase):
         try:
             item = client.info(remote_path)
         except Exception as e:
-            logger.error(f"[XIAOYA]获取文件信息时出错: {str(e)}")
+            logger.error(f"[XIAOYA]获取远程【 {str(remote_path)}】信息时出错: {str(e)}")
         
         # 判断是文件还是文件夹
         if item["size"]:
@@ -378,28 +381,34 @@ class xiaoyadownloader(_PluginBase):
             download_file_list = self.list_remote(client, remote_path)
             for item in download_file_list:
                 item["save_path"] =  item["remote_path"].replace(remote_path,save_path+save_floder)
-
-        self.download_files(download_file_list)
-        # self.systemmessage.put(f"[XIYA] {str(err)}下载完成")
+        flag = self.download_files(download_file_list)
+        if flag:
+            self.systemmessage.put(f"[XIYA] {str(remote_path)}下载成功")
+        else:
+            self.systemmessage.put(f"[XIYA] {str(remote_path)}下载失败")
+        return flag
+        
 
     def xiaoya_downloaders(self, urls):
         """
         逐一下载每个URL
         """
         logger.debug(f"[XIAOYA]开始处理多个url")
-        if not _save_root.endswith('/'):
-            _save_root = _save_root + '/'
+        if not self._save_root.endswith('/'):
+            self._save_root = self._save_root + '/'
         
-        err_urls = ["111","https://111.bbb.com"]
-        err_flag = True
+        err_urls = []
+        err_flag = False
         for index, url in enumerate(urls):
             try:
-                self.xiaoya_downloader(self, url, _save_root)
+                flag = self.xiaoya_downloader(url, self._save_root)
+                if not flag:
+                    err_urls.append(url + "\n")
+                    err_flag = True
             except Exception as e:
-                err_urls.append(url + "\n")
-                logger.error(f"[XIAOYA] {str(e)}下载失败")
+                logger.error(f"[XIAOYA]下载失败： {str(e)}")
                 # 推送实时消息
-                # self.systemmessage.put(f"[XIAOYA]{str(e)}下载失败")
+                self.systemmessage.put(f"[XIAOYA]下载失败：{str(e)}")
         return err_flag, err_urls
 
     def stop_service(self):
