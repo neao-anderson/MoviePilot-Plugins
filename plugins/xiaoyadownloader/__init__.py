@@ -18,7 +18,7 @@ class xiaoyadownloader(_PluginBase):
     # 插件图标
     plugin_icon = "https://s2.loli.net/2023/04/24/Z9bMjB3TutzKDGY.png"
     # 插件版本
-    plugin_version = "0.2"
+    plugin_version = "0.3"
     # 插件作者
     plugin_author = "neao"
     # 作者主页
@@ -32,7 +32,7 @@ class xiaoyadownloader(_PluginBase):
 
     # 私有属性
     _urls = []
-    _save_path = ''
+    _save_root = ''
     _options = {}
     _enabled = False
     
@@ -41,7 +41,7 @@ class xiaoyadownloader(_PluginBase):
         # 读取配置
         if config:
             self._enabled = config.get("enabled")
-            self._save_path = config.get("save_path")
+            self._save_root = config.get("save_root")
             self._urls = config.get("urls")
 
             # 还需要读取webdav配置
@@ -61,8 +61,7 @@ class xiaoyadownloader(_PluginBase):
                 self._urls = new_urls
 
                 # 进行下载
-                save_path = self._save_path
-                error_flag, error_urls = self.__xiaoya_downloaders(self._urls, save_path)
+                error_flag, error_urls = self.xiaoya_downloaders(self._urls, self._save_root)
 
                 # 只执行一次
                 self._enabled = self._enabled and not error_flag
@@ -70,7 +69,7 @@ class xiaoyadownloader(_PluginBase):
                 # 更新错误urls
                 self.update_config({
                     "enabled": self._enabled,
-                    "save_path": self._save_path,
+                    "save_root": self._save_root,
                     "urls": '\n'.join(self._urls),
                     "err_urls": '\n'.join(error_urls)
                 })
@@ -126,7 +125,7 @@ class xiaoyadownloader(_PluginBase):
                                            {
                                                'component': 'VTextarea',
                                                'props': {
-                                                   'model': 'save_path',
+                                                   'model': 'save_root',
                                                    'label': '保存路径',
                                                    ':value': '/media/',
                                                    'rows': 1,
@@ -208,7 +207,7 @@ class xiaoyadownloader(_PluginBase):
                    }
                ], {
                    "enabled": False,
-                   "save_path": "",
+                   "save_root": "",
                    "urls": "",
                    "err_urls": ""
                }
@@ -369,31 +368,29 @@ class xiaoyadownloader(_PluginBase):
                     'save_path': save_path + save_floder
                 }]
         else:
-            download_file_list = list_remote(client, remote_path)
+            download_file_list = self.list_remote(client, remote_path)
             for item in download_file_list:
                 item["save_path"] =  item["remote_path"].replace(remote_path,save_path+save_floder)
 
         self.download_files(download_file_list)
-        self.systemmessage.put(f"[XIYA] {str(err)}下载完成")
+        # self.systemmessage.put(f"[XIYA] {str(err)}下载完成")
 
-    @staticmethod
-
-    def __xiaoya_downloaders(self, urls, save_path):
+    def xiaoya_downloaders(self, urls, save_root):
         """
         逐一下载每个URL
         """
-        if not save_path.endswith('/'):
-            save_path = save_path + '/'
-        err_urls = [111]
+        if not save_root.endswith('/'):
+            save_root = save_root + '/'
+        err_urls = ["111","https://111.bbb.com"]
         err_flag = True
         for index, url in enumerate(urls):
             try:
-                xiaoya_downloader(self, url, save_path)
+                self.xiaoya_downloader(self, url, save_root)
             except Exception as e:
                 err_urls.append(url + "\n")
                 logger.error(f"[XIAOYA] {str(e)}下载失败")
                 # 推送实时消息
-                self.systemmessage.put(f"[XIAOYA]{str(e)}下载失败")
+                # self.systemmessage.put(f"[XIAOYA]{str(e)}下载失败")
         return err_flag, err_urls
 
     def stop_service(self):
