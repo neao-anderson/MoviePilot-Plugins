@@ -10,7 +10,7 @@ import urllib.parse, requests, re, os, time
 from webdav3.client import Client
 from webdav3.exceptions import *
 
-class xiaoyadownloader(self):
+class xiaoyadownloader(_PluginBase):
     # 插件名称
     plugin_name = "小雅下载器"
     # 插件描述
@@ -18,7 +18,7 @@ class xiaoyadownloader(self):
     # 插件图标
     plugin_icon = "https://s2.loli.net/2023/04/24/Z9bMjB3TutzKDGY.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "neao"
     # 作者主页
@@ -243,7 +243,7 @@ class xiaoyadownloader(self):
             items = client.list(remote_path,get_info=True)
         except Exception as e:
             logger.error(f"[XIAOYA]获取远程文件列表【{str(remote_path)}】时出错: {str(e)}")
-        
+            self.systemmessage.put(f"[XIAOYA]获取远程文件列表【{str(remote_path)}】时出错: {str(e)}")
         file_list = []
         
         for item in items:
@@ -268,6 +268,7 @@ class xiaoyadownloader(self):
 
         if retries <= 0:
             logger.error(f"[XIAOYA]【{str(file_name)}】下载失败")
+            self.systemmessage.put(f"[XIAOYA]【{str(file_name)}】下载失败")
             return 0
 
         if os.path.exists(save_path):
@@ -298,15 +299,18 @@ class xiaoyadownloader(self):
         except requests.exceptions.RequestException as e:
             # 捕获所有requests库的异常
             logger.error(f"[XIAOYA]出现下载异常: {e}")
+            self.systemmessage.put(f"[XIAOYA]出现下载异常: {e}")
             time.sleep(delay)
             return self.download_file(item, retries-1, delay*2)
         except IOError as e:
             # 捕获文件操作相关的异常
             logger.error(f"[XIAOYA]出现读写异常: {e}")
+            self.systemmessage.put(f"[XIAOYA]出现读写异常: {e}")
             return 0
         except Exception as e:
             # 捕获其他未知异常
             logger.error(f"[XIAOYA]出现未知异常: {e}")
+            self.systemmessage.put(f"[XIAOYA]出现未知异常: {e}")
             return 0
 
     def download_files(self, download_file_list):
@@ -366,6 +370,7 @@ class xiaoyadownloader(self):
             item = client.info(remote_path)
         except Exception as e:
             logger.error(f"[XIAOYA]获取远程【 {str(remote_path)}】信息时出错: {str(e)}")
+            self.systemmessage.put(f"[XIAOYA]获取远程【 {str(remote_path)}】信息时出错: {str(e)}")
         
         # 判断是文件还是文件夹
         if item["size"]:
@@ -407,7 +412,6 @@ class xiaoyadownloader(self):
                     err_flag = True
             except Exception as e:
                 logger.error(f"[XIAOYA]下载失败： {str(e)}")
-                # 推送实时消息
                 self.systemmessage.put(f"[XIAOYA]下载失败：{str(e)}")
         return err_flag, err_urls
 
