@@ -61,7 +61,7 @@ class xiaoyadownloader(_PluginBase):
                 self._urls = new_urls
 
                 # 进行下载
-                error_flag, error_urls = self.__xiaoya_downloader(self._urls, self._save_path)
+                error_flag, error_urls = self.__xiaoya_downloaders(self._urls, self._save_path)
 
                 # 只执行一次
                 self._enabled = self._enabled and not error_flag
@@ -127,7 +127,7 @@ class xiaoyadownloader(_PluginBase):
                                                'props': {
                                                    'model': 'save_path',
                                                    'label': '保存路径',
-                                                   'value': '/media',
+                                                   ':value': '/media/',
                                                    'rows': 1,
                                                    'placeholder': '请输入保存路径',
                                                }
@@ -207,6 +207,7 @@ class xiaoyadownloader(_PluginBase):
                    }
                ], {
                    "enabled": False,
+                   "save_path": "",
                    "urls": "",
                    "err_urls": ""
                }
@@ -376,15 +377,17 @@ class xiaoyadownloader(_PluginBase):
 
     @staticmethod
 
-    def __xiaoya_downloader(self, urls, save_path):
+    def __xiaoya_downloaders(self, urls, save_path):
         """
         逐一下载每个URL
         """
+        if not save_path.endswith('/'):
+            save_path = save_path + '/'
         err_urls = []
         err_flag = False
         for index, url in enumerate(urls):
             try:
-                xiaoya_downloader(url, save_path)
+                xiaoya_downloader(self, url, save_path)
             except Exception as e:
                 err_urls.append(url + "\n")
                 logger.error(f"[XIAOYA] {str(e)}下载失败")
