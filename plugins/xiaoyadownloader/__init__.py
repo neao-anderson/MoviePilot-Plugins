@@ -44,8 +44,8 @@ class xiaoyadownloader(_PluginBase):
             if isinstance(self._urls, str):
                 self._urls = str(self._urls).split('\n')
             
-            if self._enabled and self._hosts:
-                # 排除空的host
+            if self._enabled and self._urls:
+                # 排除空的url
                 new_urls = []
                 for url in self._urls:
                     if url and url != '\n':
@@ -58,7 +58,7 @@ class xiaoyadownloader(_PluginBase):
                 # 只执行一次
                 self._enabled = self._enabled and not error_flag
 
-                # 更新错误Hosts
+                # 更新错误urls
                 self.update_config({
                     "urls": '\n'.join(self._urls),
                     "err_urls": '\n'.join(self.err_urls),
@@ -227,7 +227,7 @@ class xiaoyadownloader(_PluginBase):
                     logger.error(f"[XIAOYA] URL错误：{str(url)}")
                     err_flag = False
             except Exception as err:
-                err_urls.append(host + "\n")
+                err_urls.append(url + "\n")
                 logger.error(f"[HOST] 格式转换错误：{str(err)}")
                 # 推送实时消息
                 self.systemmessage.put(f"[HOST] 格式转换错误：{str(err)}")
