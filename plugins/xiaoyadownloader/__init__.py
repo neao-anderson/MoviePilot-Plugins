@@ -10,8 +10,6 @@ import urllib.parse, requests, re, os, time
 from webdav3.client import Client
 from webdav3.exceptions import *
 
-logger.setLevel(20)
-
 class xiaoyadownloader(_PluginBase):
     # 插件名称
     plugin_name = "小雅下载器"
@@ -20,7 +18,7 @@ class xiaoyadownloader(_PluginBase):
     # 插件图标
     plugin_icon = "https://s2.loli.net/2023/04/24/Z9bMjB3TutzKDGY.png"
     # 插件版本
-    plugin_version = "0.4"
+    plugin_version = "0.5"
     # 插件作者
     plugin_author = "neao"
     # 作者主页
